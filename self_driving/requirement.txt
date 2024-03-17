@@ -1,7 +1,0 @@
-tensorflow
-numpy
-matplotlib
-tqdm
-scikit-learn
-pandas
-opencv-python
