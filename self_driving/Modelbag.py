@@ -3,8 +3,6 @@ import os
 import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
-from tensorflow.keras import layers, models
-from tqdm import tqdm
 from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping, TensorBoard, History
 from sklearn.model_selection import train_test_split
 import time
@@ -15,7 +13,7 @@ log_path="/home/alyjf10/self_driving/logs/fit/"
 loss_img='/home/alyjf10/self_driving/loss_plot.png'
 
 class NN(tf.keras.Model):
-    def __init__(self):
+    def __init__(self,model_name):
         '''
         Init the structure,when you init the structure in main.py,it will plot a summary of structure.
         my initial structure is that
@@ -32,11 +30,94 @@ class NN(tf.keras.Model):
 
         '''
         super(NN, self).__init__()
-        self.base_model = tf.keras.applications.resnet_v2.ResNet50V2(
-                                      include_top=False,
-                                      weights='imagenet',
-                                      input_shape=(224, 224, 3),
-                                      input_tensor=None)
+        print('--------------------------------------------------------------------------------------------------------------------------------------------')
+        print('Model: ',model_name)
+        if model_name == 'ResNet50V2':
+            self.base_model = tf.keras.applications.resnet_v2.ResNet50V2(
+                                        include_top=False,
+                                        weights='imagenet',
+                                        input_shape=(224, 224, 3),
+                                        input_tensor=None)
+        elif model_name == 'ResNet101V2':
+            self.base_model=tf.keras.applications.resnet_v2.ResNet101V2(
+                                        include_top=False,
+                                        weights='imagenet',
+                                        input_shape=(224, 224, 3)
+
+                                    )
+        elif model_name == 'ResNet50':
+            self.base_model = tf.keras.applications.resnet50.ResNet50(
+                                        include_top=False,
+                                        weights='imagenet',
+                                        input_tensor=None,
+                                        input_shape=(224, 224, 3)
+                                    )
+        elif model_name == 'VGG19':
+            self.base_model = tf.keras.applications.vgg19.VGG19(
+                                        include_top=False,
+                                        weights='imagenet',
+                                        input_tensor=None,
+                                        input_shape=(224, 224, 3)
+                                    )
+        elif model_name == 'ResNet152V2':
+            self.base_model = tf.keras.applications.resnet_v2.ResNet152V2(
+                                        include_top=False,
+                                        weights='imagenet',
+                                        input_tensor=None,
+                                        input_shape=(224, 224, 3)
+                                    )
+        elif model_name == 'VGG16':
+            self.base_model = tf.keras.applications.vgg16.VGG16(
+                                        include_top=False,
+                                        weights='imagenet',
+                                        input_tensor=None,
+                                        input_shape=(224, 224, 3))
+        elif model_name == 'DenseNet201':
+            self.base_model = tf.keras.applications.densenet.DenseNet201(
+                                        include_top=False,
+                                        weights='imagenet',
+                                        input_tensor=None,
+                                        input_shape=(224,224,3),
+                                    )
+        elif model_name == 'DenseNet169':
+            self.base_model = tf.keras.applications.densenet.DenseNet169(
+                                        include_top=False,
+                                        weights='imagenet',
+                                        input_tensor=None,
+                                        input_shape=(224,224,3),
+                                    )
+        elif model_name == 'DenseNet121':
+            self.base_model = tf.keras.applications.densenet.DenseNet121(
+                                        include_top=False,
+                                        weights='imagenet',
+                                        input_tensor=None,
+                                        input_shape=(224,224,3),
+                                    )
+        elif model_name == 'EfficientNetV2S':
+            self.base_model = tf.keras.applications.efficientnet_v2.EfficientNetV2S(
+                                        include_top=False,
+                                        weights='imagenet',
+                                        input_tensor=None,
+                                        input_shape=(224,224,3))
+        elif model_name == 'EfficientNetV2M':
+            self.base_model = tf.keras.applications.efficientnet_v2.EfficientNetV2M(
+                                        include_top=False,
+                                        weights='imagenet',
+                                        input_tensor=None,
+                                        input_shape=(224,224,3))
+        elif model_name == 'EfficientNetV2L':
+            self.base_model = tf.keras.applications.efficientnet_v2.EfficientNetV2L(
+                                        include_top=False,
+                                        weights='imagenet',
+                                        input_tensor=None,
+                                        input_shape=(224,224,3))
+
+        
+        else:
+            raise ValueError("Invalid model_name. Supported options are 'ResNet50V2'.")
+
+
+            
         '''
         This base_model has 195 layers, I frozen all of them, means will not train the base layer.
         If you want to fine-tune the pre-trained model, you can use the follow code, 
@@ -48,43 +129,50 @@ class NN(tf.keras.Model):
                 layer.trainable = False
         '''
         for i, layer in enumerate(self.base_model.layers):
-            layer.trainable = False
-        print('ALL layers: ', len(self.base_model.layers))#print the number of layers in base model.
 
+            layer.trainable = False
+
+
+
+        print('ALL layers: ', len(self.base_model.layers))#print the number of layers in base model.
+        self.conv_reduce_channels = tf.keras.layers.Conv2D(filters=256, kernel_size=1, strides=1, padding='same', activation='relu')
+        self.conv_reduce_channels2 = tf.keras.layers.Conv2D(filters=128, kernel_size=3, strides=1, padding='same', activation='relu')
         self.AveragePooling = tf.keras.layers.GlobalAveragePooling2D()
         self.flatten = tf.keras.layers.Flatten()
-        self.Dropout_2 = tf.keras.layers.Dropout(0.2)
-        self.Dense = tf.keras.layers.Dense(50,activation='relu')
-        self.Dropout_3 = tf.keras.layers.Dropout(0.2)
+        self.Dropout_2 = tf.keras.layers.Dropout(0.5)
         #angle branch
-        self.angle_branch = tf.keras.Sequential([                              
-            tf.keras.layers.Dense(10, activation='relu'),   
+        self.angle_branch = tf.keras.Sequential([      
+            tf.keras.layers.Dense(32,activation='relu'),
+            tf.keras.layers.Dropout(0.2),                        
             tf.keras.layers.Dense(1, activation='linear')])                                                                                                                                      
         # speed branch
         self.speed_branch = tf.keras.Sequential([             
-            tf.keras.layers.Dense(10, activation='relu'), 
-            tf.keras.layers.Dense(1, activation='linear') ])
+            tf.keras.layers.Dense(32,activation='relu'),
+            tf.keras.layers.Dropout(0.2),                            
+            tf.keras.layers.Dense(1, activation='linear')])
         self.build([None, 224, 224, 3])
         self.summary()
 
     def call(self, inputs):
         x = self.base_model(inputs)
+        x = self.conv_reduce_channels(x)
+        x = self.conv_reduce_channels2(x)
         x = self.AveragePooling(x)
         x = self.flatten(x)
         x = self.Dropout_2(x)
-        x = self.Dense(x)
-        x = self.Dropout_3(x)
         output_1 = self.angle_branch(x)
-        output_2 = self.speed_branch(x)   
+        output_2 = self.speed_branch(x)
         return output_1, output_2
+
     #Read img and preprocess
     def preprocess_image(self, image_path, augment=False):
         image = tf.io.read_file(image_path)
         image = tf.image.decode_png(image, channels=3)
         if augment:
-            image = tf.image.random_brightness(image, max_delta=0.1)  # 随机亮度调整
-            image = tf.image.random_contrast(image, lower=0.9, upper=1.1) 
+            image = tf.image.random_brightness(image, max_delta=0.2)  # 随机亮度调整
+            image = tf.image.random_contrast(image, lower=0.8, upper=1.2) 
             image = tf.image.random_saturation(image, lower=0.8, upper=1.2)  
+            #image = tf.image.random_crop(image,(220,220,3))
 
         image = tf.image.resize(image, [224, 224]) / 255.0
         print("Data Process!")
@@ -98,7 +186,13 @@ class NN(tf.keras.Model):
         labels_df['image_path'] = labels_df['image_id'].apply(lambda x: os.path.join(root_path, img_path, f"{x}.png"))
         labels_df = labels_df[labels_df['image_path'].apply(os.path.exists)]
         # split into train dataset and validation dataset
-        train_df, val_df = train_test_split(labels_df, test_size=0.2, random_state=6)
+
+            # Split data into two parts based on index
+        original_datasets = labels_df[labels_df.index <= 13794]
+        flip_data = labels_df[labels_df.index > 13794]
+        train_df, val_df = train_test_split(original_datasets, test_size=0.2, random_state=6)
+        # Combine remaining data with training set
+        train_df = pd.concat([train_df, flip_data])
         # to tensor type
         train_img_dataset = tf.data.Dataset.from_tensor_slices((
             train_df['image_path'].values
@@ -124,14 +218,15 @@ class NN(tf.keras.Model):
         #zip img and label
         train_dataset = tf.data.Dataset.zip((train_img_dataset,train_label_dataset))
         val_dataset = tf.data.Dataset.zip((val_img_dataset, val_label_dataset))
+        train_dataset = train_dataset.shuffle(buffer_size=len(train_df)*2)
         return train_dataset.batch(batch_size), val_dataset.batch(batch_size)
 
     def training(self, train_dataset, val_dataset, epochs, trained_model,model_save_path):
         if trained_model != None:
             self.load_weights(trained_model)        
         self.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.0001),
-            loss={'output_1': 'mse', 'output_2': 'mse'},
-            metrics={'output_1': 'mse', 'output_2': 'mse'})        
+            loss={'output_1': 'mse', 'output_2': 'mse'},#binary_crossentropy
+            metrics=['mse'])        
         self.build([None, 224, 224, 3])
         
         log_dir = log_path + datetime.now().strftime("%Y%m%d-%H%M%S")
@@ -146,6 +241,7 @@ class NN(tf.keras.Model):
                         callbacks=[checkpoint_callback, tensorboard_callback, earlystopping_callback,history_callback])
 
         end = time.time()
+        self.save(model_save_path, save_format='tf')
         print('Time: {:.2f} minutes'.format((end - start) / 60))
         
         plt.figure(figsize=(12, 8))
@@ -167,12 +263,18 @@ class NN(tf.keras.Model):
 
         plt.tight_layout()
         plt.savefig(loss_img)
-        plt.show()
+        return history
 
     def predict_model(self, trained_model_path, image_path, output_path):
         # 加载已经训练好的模型
         self.load_weights(trained_model_path)
-
+        label_interval = 0.0625
+        num_labels = 17
+        # 标签的最小值
+        min_label = 0.0
+        
+        # 预测值所在的标签范围
+        label_range = [min_label + i * label_interval for i in range(num_labels)]
 
         # 打开 CSV 文件，准备写入数据
         with open(output_path, 'w', newline='') as csvfile:
@@ -198,15 +300,41 @@ class NN(tf.keras.Model):
                 # 对预测结果进行处理
                 angle = prediction[0][0][0]  # 从二维数组中提取值
                 speed = prediction[1][0][0] 
+                if speed >= 1:
+                    speed = 1
+                elif speed <= 0:
+                    speed = 0
+                else:
+                    speed = speed
+
+                if angle >= 1:
+                    angle = 1
+                elif angle <= 0:
+                    angle = 0
+                else:
+                    angle = angle
+
+
+                # 计算预测值与每个标签的差值的绝对值
+                #differences = [abs(prediction - label) for label in label_range]
+                #
+                ## 找到最小差值对应的标签值
+                #predicted_label_value = label_range[differences.index(min(differences))]
+                #angle = predicted_label_value
 
                 
                 # 四舍五入到合适的精度
                 angle = np.round(angle, 4)
-                speed = np.round(speed, 2)
+                speed = np.round(speed, 4)
                 image_id = image_name.split('.')[0]
 
                 writer.writerow([image_id, angle, speed])
         print('Finish!')
+
+
+
+
+
 
 
         
