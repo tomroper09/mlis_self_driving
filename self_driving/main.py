@@ -12,7 +12,7 @@ csv_path = "combined_training_data.csv"                                         
 test_data = '/home/alyjf10/self_driving_car/data/test_data/test_data'       #test data path
 test_data_csv = '/home/alyjf10/self_driving_car/data/test_data/test.csv' #where to store the prediction result
 #init Model
-all_model = {'DenseNet169','DenseNet121'}#VGG16,'DenseNet121','ResNetRS50','ResNetRS101','ResNetRS152'}#{'ResNet50','ResNet50V2','ResNet101V2','ResNet152V2','VGG19','VGG16','DenseNet121','DenseNet169','DenseNet201'}
+all_model = {'DenseNet169'}#VGG16,'DenseNet121','ResNetRS50','ResNetRS101','ResNetRS152'}#{'ResNet50','ResNet50V2','ResNet101V2','ResNet152V2','VGG19','VGG16','DenseNet121','DenseNet169','DenseNet201'}
 #best 'DenseNet169' 'DenseNet121'
 mse_results = {} 
 for name in all_model:
